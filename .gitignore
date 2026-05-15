@@ -1,0 +1,18 @@
+# Binaries
+bin/
+*.exe
+*.out
+
+# Go
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+
+# Claude Code
+.claude/
