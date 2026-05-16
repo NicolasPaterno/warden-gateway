@@ -27,9 +27,14 @@ func (p *Publisher) Publish(reading sensor.Reading) error {
 	if err != nil {
 		return err
 	}
+
 	err = p.conn.Publish(subject, readingBytes)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (p *Publisher) Close() error {
+	return p.conn.Drain()
 }
