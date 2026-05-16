@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"sync"
@@ -21,23 +21,29 @@ func main() {
 
 	sensor1, err := sensor.NewSensor("s1", "bedroom", sensor.Humidity, 800*time.Second)
 	if err != nil {
-		panic(fmt.Sprintf("unknown sensor type: %s", err))
+		log.Fatalf("unknown sensor type: %v", err)
 	}
 
 	sensor2, err := sensor.NewSensor("s2", "bedroom", sensor.Temperature, 500*time.Millisecond)
 	if err != nil {
-		panic(fmt.Sprintf("unknown sensor type: %s", err))
+		log.Fatalf("unknown sensor type: %v", err)
 	}
 
 	sensor3, err := sensor.NewSensor("s3", "bedroom", sensor.CO2, 200*time.Millisecond)
 	if err != nil {
-		panic(fmt.Sprintf("unknown sensor type: %s", err))
+		log.Fatalf("unknown sensor type: %v", err)
 	}
-	publishUrl := "nats://localhost:4222"
-	pub, err := publisher.NewPublisher(publishUrl)
+
+	publishURL := "nats://localhost:4222"
+	pub, err := publisher.NewPublisher(publishURL)
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to connect to NATS: %v", err)
 	}
+	defer func() {
+		if err := pub.Close(); err != nil {
+			log.Printf("failed to drain NATS connection: %v", err)
+		}
+	}()
 
 	var wg sync.WaitGroup
 
@@ -65,6 +71,9 @@ func main() {
 	}()
 
 	for reading := range ch {
-		pub.Publish(reading)
+		err := pub.Publish(reading)
+		if err != nil {
+			log.Printf("error on Publish: %v", err)
+		}
 	}
 }
