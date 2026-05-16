@@ -1,19 +1,19 @@
-package publisher
+package nats
 
 import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/nats-io/nats.go"
-	"github.com/nicaozx/warden-gateway/internal/sensor"
+	natsgo "github.com/nats-io/nats.go"
+	warden "github.com/nicaozx/warden-gateway"
 )
 
 type Publisher struct {
-	conn *nats.Conn
+	conn *natsgo.Conn
 }
 
 func NewPublisher(url string) (*Publisher, error) {
-	conn, err := nats.Connect(url)
+	conn, err := natsgo.Connect(url)
 	if err != nil {
 		return nil, err
 	}
@@ -21,18 +21,13 @@ func NewPublisher(url string) (*Publisher, error) {
 }
 
 // TODO: replace JSON with Protobuf when .proto files are introduced for gRPC
-func (p *Publisher) Publish(reading sensor.Reading) error {
-	subject := fmt.Sprintf("sensors.%s.%s", reading.Room, reading.Type)
+func (p *Publisher) Publish(reading warden.SensorReading) error {
+	subject := fmt.Sprintf("warden.sensors.v1.%s.%s", reading.Room, reading.Type)
 	readingBytes, err := json.Marshal(reading)
 	if err != nil {
 		return err
 	}
-
-	err = p.conn.Publish(subject, readingBytes)
-	if err != nil {
-		return err
-	}
-	return nil
+	return p.conn.Publish(subject, readingBytes)
 }
 
 func (p *Publisher) Close() error {
