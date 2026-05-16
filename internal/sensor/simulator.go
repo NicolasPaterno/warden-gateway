@@ -5,35 +5,19 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+
+	warden "github.com/nicaozx/warden-gateway"
 )
-
-type SensorType string
-
-const (
-	Temperature SensorType = "temperature"
-	Humidity    SensorType = "humidity"
-	Motion      SensorType = "motion"
-	CO2         SensorType = "co2"
-)
-
-type Reading struct {
-	SensorID string
-	Room     string
-	Type     SensorType
-	Value    float64
-	Unit     string
-	Time     time.Time
-}
 
 type Sensor struct {
 	id       string
 	room     string
-	Type     SensorType
+	sType    warden.SensorType
 	interval time.Duration
 	unit     string
 }
 
-func NewSensor(id, room string, sensorType SensorType, interval time.Duration) (*Sensor, error) {
+func NewSensor(id, room string, sensorType warden.SensorType, interval time.Duration) (*Sensor, error) {
 	unit, err := unitForType(sensorType)
 	if err != nil {
 		return nil, err
@@ -41,28 +25,28 @@ func NewSensor(id, room string, sensorType SensorType, interval time.Duration) (
 	return &Sensor{
 		id:       id,
 		room:     room,
-		Type:     sensorType,
+		sType:    sensorType,
 		interval: interval,
 		unit:     unit,
 	}, nil
 }
 
-func (s *Sensor) Run(ctx context.Context, out chan<- Reading) {
+func (s *Sensor) Run(ctx context.Context, out chan<- warden.SensorReading) {
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
 
-	min, max := sensorRangeByType(s.Type)
+	min, max := sensorRangeByType(s.sType)
 
 	for {
 		select {
 		case t := <-ticker.C:
-			out <- Reading{
-				SensorID: s.id,
-				Room:     s.room,
-				Type:     s.Type,
-				Value:    min + rand.Float64()*(max-min),
-				Unit:     s.unit,
-				Time:     t,
+			out <- warden.SensorReading{
+				SensorID:  s.id,
+				Room:      s.room,
+				Type:      s.sType,
+				Value:     min + rand.Float64()*(max-min),
+				Unit:      s.unit,
+				Timestamp: t,
 			}
 		case <-ctx.Done():
 			return
@@ -70,30 +54,30 @@ func (s *Sensor) Run(ctx context.Context, out chan<- Reading) {
 	}
 }
 
-func sensorRangeByType(sensorType SensorType) (min, max float64) {
+func sensorRangeByType(sensorType warden.SensorType) (min, max float64) {
 	switch sensorType {
-	case Humidity:
+	case warden.Humidity:
 		return 0, 100
-	case Temperature:
+	case warden.Temperature:
 		return -50, 100
-	case Motion:
+	case warden.Motion:
 		return 0, 1
-	case CO2:
+	case warden.CO2:
 		return 400, 5000
 	default:
 		panic(fmt.Sprintf("Unknown sensor type: %s", sensorType))
 	}
 }
 
-func unitForType(sensorType SensorType) (string, error) {
+func unitForType(sensorType warden.SensorType) (string, error) {
 	switch sensorType {
-	case Humidity:
+	case warden.Humidity:
 		return "%", nil
-	case Temperature:
+	case warden.Temperature:
 		return "°C", nil
-	case Motion:
+	case warden.Motion:
 		return "bool", nil
-	case CO2:
+	case warden.CO2:
 		return "ppm", nil
 	default:
 		return "", fmt.Errorf("unknown sensor type: %s", sensorType)

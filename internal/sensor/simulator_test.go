@@ -4,10 +4,12 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	warden "github.com/nicaozx/warden-gateway"
 )
 
 func TestNewSensor_ValidType(t *testing.T) {
-	s, err := NewSensor("sensor-1", "living-room", Temperature, time.Second)
+	s, err := NewSensor("sensor-1", "living-room", warden.Temperature, time.Second)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -17,7 +19,7 @@ func TestNewSensor_ValidType(t *testing.T) {
 }
 
 func TestNewSensor_InvalidType(t *testing.T) {
-	s, err := NewSensor("sensor-1", "living-room", SensorType("smoke"), time.Second)
+	s, err := NewSensor("sensor-1", "living-room", warden.SensorType("smoke"), time.Second)
 	if err == nil {
 		t.Fatalf("expected error, got none")
 	}
@@ -28,14 +30,14 @@ func TestNewSensor_InvalidType(t *testing.T) {
 
 func TestSensorRangeByType(t *testing.T) {
 	tests := []struct {
-		sensorType SensorType
+		sensorType warden.SensorType
 		min        float64
 		max        float64
 	}{
-		{Temperature, -50, 100},
-		{Humidity, 0, 100},
-		{Motion, 0, 1},
-		{CO2, 400, 5000},
+		{warden.Temperature, -50, 100},
+		{warden.Humidity, 0, 100},
+		{warden.Motion, 0, 1},
+		{warden.CO2, 400, 5000},
 	}
 
 	for _, tt := range tests {
@@ -54,18 +56,18 @@ func TestSensorRangeByType_UnknownTypePanics(t *testing.T) {
 			t.Errorf("expected panic for unknown sensor type")
 		}
 	}()
-	sensorRangeByType(SensorType("smoke"))
+	sensorRangeByType(warden.SensorType("smoke"))
 }
 
 func TestUnitForType(t *testing.T) {
 	tests := []struct {
-		sensorType SensorType
+		sensorType warden.SensorType
 		unit       string
 	}{
-		{Temperature, "°C"},
-		{Humidity, "%"},
-		{Motion, "bool"},
-		{CO2, "ppm"},
+		{warden.Temperature, "°C"},
+		{warden.Humidity, "%"},
+		{warden.Motion, "bool"},
+		{warden.CO2, "ppm"},
 	}
 
 	for _, tt := range tests {
@@ -82,14 +84,14 @@ func TestUnitForType(t *testing.T) {
 }
 
 func TestUnitForType_UnknownType(t *testing.T) {
-	_, err := unitForType(SensorType("smoke"))
+	_, err := unitForType(warden.SensorType("smoke"))
 	if err == nil {
 		t.Errorf("expected error for unknown sensor type")
 	}
 }
 
 func TestRun_ReadingsInRange(t *testing.T) {
-	s, err := NewSensor("sensor-1", "living-room", Temperature, 10*time.Millisecond)
+	s, err := NewSensor("sensor-1", "living-room", warden.Temperature, 10*time.Millisecond)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -97,10 +99,10 @@ func TestRun_ReadingsInRange(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	out := make(chan Reading, 10)
+	out := make(chan warden.SensorReading, 10)
 	go s.Run(ctx, out)
 
-	min, max := sensorRangeByType(Temperature)
+	min, max := sensorRangeByType(warden.Temperature)
 
 	for i := 0; i < 5; i++ {
 		r := <-out
@@ -113,9 +115,8 @@ func TestRun_ReadingsInRange(t *testing.T) {
 		if r.SensorID != "sensor-1" {
 			t.Errorf("expected sensor-1, got %s", r.SensorID)
 		}
-		if r.Type != Temperature {
+		if r.Type != warden.Temperature {
 			t.Errorf("expected Temperature, got %s", r.Type)
 		}
-
 	}
 }
