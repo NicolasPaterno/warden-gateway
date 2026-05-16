@@ -1,0 +1,22 @@
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: warden-timescaledb
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: warden
+      POSTGRES_DB: warden
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+
+  nats:
+    image: nats:latest
+    container_name: warden-nats
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+volumes:
+  timescaledb_data:
