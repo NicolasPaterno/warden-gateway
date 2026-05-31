@@ -25,6 +25,14 @@ type Client struct {
 	send chan []byte
 }
 
+func NewClient(hub *Hub, conn *websocket.Conn) *Client {
+	return &Client{
+		hub:  hub,
+		conn: conn,
+		send: make(chan []byte, 256),
+	}
+}
+
 func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
