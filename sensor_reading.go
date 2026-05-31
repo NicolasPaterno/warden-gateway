@@ -12,10 +12,10 @@ const (
 )
 
 type SensorReading struct {
-	SensorID  string
-	Room      string
-	Type      SensorType
-	Value     float64
-	Unit      string
-	Timestamp time.Time
+	SensorID  string     `json:"sensor_id"`
+	Room      string     `json:"room"`
+	Type      SensorType `json:"type"`
+	Value     float64    `json:"value"`
+	Unit      string     `json:"unit"`
+	Timestamp time.Time  `json:"timestamp"`
 }
