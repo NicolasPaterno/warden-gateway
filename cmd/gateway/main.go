@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync"
@@ -10,6 +11,8 @@ import (
 	"time"
 
 	warden "github.com/nicaozx/warden-gateway"
+	httptransport "github.com/nicaozx/warden-gateway/internal/http"
+	"github.com/nicaozx/warden-gateway/internal/hub"
 	natspub "github.com/nicaozx/warden-gateway/internal/nats"
 	"github.com/nicaozx/warden-gateway/internal/sensor"
 )
@@ -19,6 +22,17 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	ch := make(chan warden.SensorReading)
+
+	h := hub.NewHub()
+	go h.Run(ctx)
+	wsHandler := httptransport.NewWsHandler(h)
+	router := httptransport.NewRouter(wsHandler)
+
+	go func() {
+		if err := http.ListenAndServe(":8080", router); err != nil {
+			log.Fatalf("http server error: %v", err)
+		}
+	}()
 
 	sensor1, err := sensor.NewSensor("s1", "bedroom", warden.Humidity, 800*time.Second)
 	if err != nil {
@@ -76,5 +90,10 @@ func main() {
 		if err != nil {
 			log.Printf("error on Publish: %v", err)
 		}
+		go func() {
+			if err := h.Broadcast(reading); err != nil {
+				log.Printf("error on broadcast: %v", err)
+			}
+		}()
 	}
 }
