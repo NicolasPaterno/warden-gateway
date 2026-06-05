@@ -6,16 +6,31 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gorilla/websocket"
+	warden "github.com/nicaozx/warden-gateway"
 	httptransport "github.com/nicaozx/warden-gateway/internal/http"
 	"github.com/nicaozx/warden-gateway/internal/hub"
+	"github.com/nicaozx/warden-gateway/internal/service"
 )
+
+type mockReadingRepository struct{}
+
+func (m *mockReadingRepository) Save(_ context.Context, _ warden.SensorReading) error {
+	return nil
+}
+
+func (m *mockReadingRepository) GetByRoomAndType(_ context.Context, _ string, _ warden.SensorType, _, _ time.Time) ([]warden.SensorReading, error) {
+	return nil, nil
+}
 
 func TestNewRouter_WSRouteExists(t *testing.T) {
 	h := hub.NewHub()
 	wsHandler := httptransport.NewWsHandler(h)
-	router := httptransport.NewRouter(wsHandler)
+	svc := service.NewReadingService(&mockReadingRepository{})
+	readingsHandler := httptransport.NewReadingsHandler(svc)
+	router := httptransport.NewRouter(wsHandler, readingsHandler)
 
 	request, err := http.NewRequest("GET", "/ws", nil)
 	if err != nil {
@@ -32,7 +47,9 @@ func TestNewRouter_WSRouteExists(t *testing.T) {
 func TestWsHandler_UpgradeFailsWithoutWSHeaders(t *testing.T) {
 	h := hub.NewHub()
 	wsHandler := httptransport.NewWsHandler(h)
-	router := httptransport.NewRouter(wsHandler)
+	svc := service.NewReadingService(&mockReadingRepository{})
+	readingsHandler := httptransport.NewReadingsHandler(svc)
+	router := httptransport.NewRouter(wsHandler, readingsHandler)
 
 	request, err := http.NewRequest("GET", "/ws", nil)
 	if err != nil {
@@ -48,7 +65,9 @@ func TestWsHandler_UpgradeFailsWithoutWSHeaders(t *testing.T) {
 func TestWsHandler_UpgradeSucceeds(t *testing.T) {
 	h := hub.NewHub()
 	wsHandler := httptransport.NewWsHandler(h)
-	router := httptransport.NewRouter(wsHandler)
+	svc := service.NewReadingService(&mockReadingRepository{})
+	readingsHandler := httptransport.NewReadingsHandler(svc)
+	router := httptransport.NewRouter(wsHandler, readingsHandler)
 
 	response := httptest.NewServer(router)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -59,5 +78,8 @@ func TestWsHandler_UpgradeSucceeds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	conn.Close()
+	err = conn.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
 }
