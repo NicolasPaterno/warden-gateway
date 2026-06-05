@@ -41,4 +41,12 @@ test-coverage:
 tidy:
 	go mod tidy
 
-.PHONY: docker-up docker-down docker-logs migrate-up migrate-down migrate-force sqlc build run test test-coverage tidy
+lint:
+	golangci-lint run ./...
+
+# ── Setup ─────────────────────────────────────────────────────────────────────
+setup: docker-up
+	sleep 3
+	$(MAKE) migrate-up
+
+.PHONY: docker-up docker-down docker-logs migrate-up migrate-down migrate-force sqlc build run test test-coverage tidy lint setup
