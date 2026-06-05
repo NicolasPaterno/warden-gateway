@@ -25,12 +25,23 @@ func (m *mockReadingRepository) GetByRoomAndType(_ context.Context, _ string, _ 
 	return nil, nil
 }
 
-func TestNewRouter_WSRouteExists(t *testing.T) {
-	h := hub.NewHub()
+type mockBroker struct{}
+
+func (m *mockBroker) Publish(_ warden.SensorReading) error { return nil }
+func (m *mockBroker) Close() error                         { return nil }
+func (m *mockBroker) Ping() error                          { return nil }
+
+func newTestRouter(h *hub.Hub) http.Handler {
 	wsHandler := httptransport.NewWsHandler(h)
 	svc := service.NewReadingService(&mockReadingRepository{})
 	readingsHandler := httptransport.NewReadingsHandler(svc)
-	router := httptransport.NewRouter(wsHandler, readingsHandler)
+	healthHandler := httptransport.NewHealthHandler(nil, &mockBroker{})
+	return httptransport.NewRouter(wsHandler, readingsHandler, healthHandler)
+}
+
+func TestNewRouter_WSRouteExists(t *testing.T) {
+	h := hub.NewHub()
+	router := newTestRouter(h)
 
 	request, err := http.NewRequest("GET", "/ws", nil)
 	if err != nil {
@@ -46,10 +57,7 @@ func TestNewRouter_WSRouteExists(t *testing.T) {
 
 func TestWsHandler_UpgradeFailsWithoutWSHeaders(t *testing.T) {
 	h := hub.NewHub()
-	wsHandler := httptransport.NewWsHandler(h)
-	svc := service.NewReadingService(&mockReadingRepository{})
-	readingsHandler := httptransport.NewReadingsHandler(svc)
-	router := httptransport.NewRouter(wsHandler, readingsHandler)
+	router := newTestRouter(h)
 
 	request, err := http.NewRequest("GET", "/ws", nil)
 	if err != nil {
@@ -64,10 +72,7 @@ func TestWsHandler_UpgradeFailsWithoutWSHeaders(t *testing.T) {
 
 func TestWsHandler_UpgradeSucceeds(t *testing.T) {
 	h := hub.NewHub()
-	wsHandler := httptransport.NewWsHandler(h)
-	svc := service.NewReadingService(&mockReadingRepository{})
-	readingsHandler := httptransport.NewReadingsHandler(svc)
-	router := httptransport.NewRouter(wsHandler, readingsHandler)
+	router := newTestRouter(h)
 
 	response := httptest.NewServer(router)
 	ctx, cancel := context.WithCancel(context.Background())
