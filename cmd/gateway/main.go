@@ -34,7 +34,7 @@ func main() {
 		}
 	}()
 
-	sensor1, err := sensor.NewSensor("s1", "bedroom", warden.Humidity, 800*time.Second)
+	sensor1, err := sensor.NewSensor("s1", "bedroom", warden.Humidity, 800*time.Millisecond)
 	if err != nil {
 		log.Fatalf("unknown sensor type: %v", err)
 	}
