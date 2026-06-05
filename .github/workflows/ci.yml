@@ -25,7 +25,7 @@ jobs:
 
       - name: Install golangci-lint
         if: steps.golangci-cache.outputs.cache-hit != 'true'
-        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin latest
+        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
       - name: Lint
         run: golangci-lint run ./...
