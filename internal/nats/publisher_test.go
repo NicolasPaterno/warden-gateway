@@ -29,7 +29,11 @@ func TestPublisher_Publish(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer container.Terminate(ctx)
+	defer func() {
+		if err := container.Terminate(ctx); err != nil {
+			t.Logf("Failed to terminate: %v", err)
+		}
+	}()
 
 	host, err := container.Host(ctx)
 	if err != nil {
@@ -67,7 +71,10 @@ func TestPublisher_Publish(t *testing.T) {
 	}
 
 	//publish the message
-	publish.Publish(reading)
+	err = publish.Publish(reading)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Wait for a message
 	msg, err := sub.NextMsg(10 * time.Second)
