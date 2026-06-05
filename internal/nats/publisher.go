@@ -48,3 +48,10 @@ func (p *Publisher) Publish(reading warden.SensorReading) error {
 func (p *Publisher) Close() error {
 	return p.conn.Drain()
 }
+
+func (p *Publisher) Ping() error {
+	if p.conn.Status() != natsgo.CONNECTED {
+		return fmt.Errorf("NATS not connected: %s", p.conn.Status())
+	}
+	return nil
+}
