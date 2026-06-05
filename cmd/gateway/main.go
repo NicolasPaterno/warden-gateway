@@ -42,10 +42,22 @@ func main() {
 	svc := service.NewReadingService(repo)
 	readingHandler := httptransport.NewReadingsHandler(svc)
 
+	pub, err := natspub.NewPublisher(cfg.NATSUrl)
+	if err != nil {
+		log.Fatalf("failed to connect to NATS: %v", err)
+	}
+	defer func() {
+		if err := pub.Close(); err != nil {
+			log.Printf("failed to drain NATS connection: %v", err)
+		}
+	}()
+
+	healthHandler := httptransport.NewHealthHandler(pool, pub)
+
 	h := hub.NewHub()
 	go h.Run(ctx)
 	wsHandler := httptransport.NewWsHandler(h)
-	router := httptransport.NewRouter(wsHandler, readingHandler)
+	router := httptransport.NewRouter(wsHandler, readingHandler, healthHandler)
 
 	go func() {
 		if err := http.ListenAndServe(cfg.HTTPPort, router); err != nil {
@@ -67,16 +79,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("unknown sensor type: %v", err)
 	}
-
-	pub, err := natspub.NewPublisher(cfg.NATSUrl)
-	if err != nil {
-		log.Fatalf("failed to connect to NATS: %v", err)
-	}
-	defer func() {
-		if err := pub.Close(); err != nil {
-			log.Printf("failed to drain NATS connection: %v", err)
-		}
-	}()
 
 	var wg sync.WaitGroup
 
