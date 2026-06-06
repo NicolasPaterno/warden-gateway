@@ -44,11 +44,17 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      image: ${{ steps.image.outputs.name }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Set image name
-        run: echo "IMAGE_NAME=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+        id: image
+        run: |
+          IMAGE="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+          echo "name=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "IMAGE_NAME=${IMAGE}" >> "$GITHUB_ENV"
 
       - uses: docker/login-action@v3
         with:
@@ -63,3 +69,41 @@ jobs:
           tags: |
             ${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ env.IMAGE_NAME }}:latest
+
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: docker
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+    env:
+      IMAGE: ${{ needs.docker.outputs.image }}
+      K8S_NS: warden
+    steps:
+      - name: Checkout warden-infra
+        uses: actions/checkout@v4
+        with:
+          repository: nicaozx/warden-infra
+          path: warden-infra
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Run database migrations
+        run: |
+          kubectl apply -f warden-infra/k8s/gateway/migrations-configmap.yml
+          kubectl delete job gateway-migrate -n $K8S_NS --ignore-not-found
+          kubectl apply -f warden-infra/k8s/gateway/migrations-job.yml
+          kubectl wait --for=condition=complete job/gateway-migrate \
+            -n $K8S_NS --timeout=120s
+
+      - name: Deploy gateway
+        run: |
+          kubectl set image deployment/warden-gateway \
+            gateway=${{ env.IMAGE }}:${{ github.sha }} \
+            -n $K8S_NS
+          kubectl rollout status deployment/warden-gateway \
+            -n $K8S_NS --timeout=120s
