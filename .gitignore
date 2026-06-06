@@ -3,6 +3,7 @@
 
 # Binaries
 bin/
+gateway
 *.exe
 *.out
 
