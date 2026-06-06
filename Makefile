@@ -1,14 +1,15 @@
-DB_URL=postgresql://postgres:warden@localhost:5432/warden?sslmode=disable
+DB_URL=postgresql://postgres:warden@localhost:5432/warden_gateway_db?sslmode=disable
+INFRA_DIR=../warden-infra/local
 
-# ── Docker ────────────────────────────────────────────────────────────────────
+# ── Docker (delegates to warden-infra) ───────────────────────────────────────
 docker-up:
-	docker compose up -d
+	docker compose -f $(INFRA_DIR)/docker-compose.yml up -d
 
 docker-down:
-	docker compose down
+	docker compose -f $(INFRA_DIR)/docker-compose.yml down
 
 docker-logs:
-	docker compose logs -f
+	docker compose -f $(INFRA_DIR)/docker-compose.yml logs -f
 
 # ── Migrations ────────────────────────────────────────────────────────────────
 migrate-up:
