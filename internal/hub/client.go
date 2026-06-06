@@ -1,7 +1,7 @@
 package hub
 
 import (
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -37,18 +37,18 @@ func (c *Client) readPump() {
 		c.hub.unregister <- c
 		err := c.conn.Close()
 		if err != nil {
-			log.Println("close connection error:", err)
+			slog.Warn("close connection error", "error", err)
 		}
 	}()
 	c.conn.SetReadLimit(maxMessageSize)
 	err := c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	if err != nil {
-		log.Println("set read deadline error:", err)
+		slog.Warn("set read deadline error", "error", err)
 	}
 	c.conn.SetPongHandler(func(string) error {
 		err := c.conn.SetReadDeadline(time.Now().Add(pongWait))
 		if err != nil {
-			log.Println("set read deadline error:", err)
+			slog.Warn("set read deadline error", "error", err)
 		}
 		return nil
 	})
@@ -56,7 +56,7 @@ func (c *Client) readPump() {
 		_, _, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("error: %v", err)
+				slog.Warn("websocket unexpected close", "error", err)
 			}
 			break
 		}
@@ -69,7 +69,7 @@ func (c *Client) writePump() {
 		ticker.Stop()
 		err := c.conn.Close()
 		if err != nil {
-			log.Println("close connection error:", err)
+			slog.Warn("close connection error", "error", err)
 		}
 	}()
 	for {
@@ -77,12 +77,12 @@ func (c *Client) writePump() {
 		case message, ok := <-c.send:
 			err := c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err != nil {
-				log.Println("set write deadline error:", err)
+				slog.Warn("set write deadline error", "error", err)
 			}
 			if !ok {
 				err := c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				if err != nil {
-					log.Println("close connection error:", err)
+					slog.Warn("close connection error", "error", err)
 				}
 				return
 			}
@@ -114,7 +114,7 @@ func (c *Client) writePump() {
 		case <-ticker.C:
 			err := c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err != nil {
-				log.Println("set write deadline error:", err)
+				slog.Warn("set write deadline error", "error", err)
 			}
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return

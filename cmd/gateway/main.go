@@ -2,7 +2,8 @@ package main
 
 import (
 	"context"
-	"log"
+	"errors"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -23,8 +24,14 @@ import (
 )
 
 func main() {
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
+	slog.SetDefault(logger)
+
 	if err := godotenv.Load(); err != nil {
-		log.Print("No .env file found")
+		slog.Info("no .env file found")
 	}
 	cfg := config.Load()
 
@@ -34,7 +41,8 @@ func main() {
 
 	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
 	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
+		slog.Error("failed to connect to database", "error", err)
+		os.Exit(1)
 	}
 	defer pool.Close()
 
@@ -44,11 +52,12 @@ func main() {
 
 	pub, err := natspub.NewPublisher(cfg.NATSUrl)
 	if err != nil {
-		log.Fatalf("failed to connect to NATS: %v", err)
+		slog.Error("failed to connect to NATS", "error", err)
+		os.Exit(1)
 	}
 	defer func() {
 		if err := pub.Close(); err != nil {
-			log.Printf("failed to drain NATS connection: %v", err)
+			slog.Error("failed to drain NATS connection", "error", err)
 		}
 	}()
 
@@ -60,24 +69,28 @@ func main() {
 	router := httptransport.NewRouter(wsHandler, readingHandler, healthHandler)
 
 	go func() {
-		if err := http.ListenAndServe(cfg.HTTPPort, router); err != nil {
-			log.Fatalf("http server error: %v", err)
+		if err := http.ListenAndServe(cfg.HTTPPort, router); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("http server error", "error", err)
+			os.Exit(1)
 		}
 	}()
 
 	sensor1, err := sensor.NewSensor("s1", "bedroom", warden.Humidity, 800*time.Millisecond)
 	if err != nil {
-		log.Fatalf("unknown sensor type: %v", err)
+		slog.Error("unknown sensor type", "error", err)
+		os.Exit(1)
 	}
 
 	sensor2, err := sensor.NewSensor("s2", "bedroom", warden.Temperature, 500*time.Millisecond)
 	if err != nil {
-		log.Fatalf("unknown sensor type: %v", err)
+		slog.Error("unknown sensor type", "error", err)
+		os.Exit(1)
 	}
 
 	sensor3, err := sensor.NewSensor("s3", "bedroom", warden.CO2, 200*time.Millisecond)
 	if err != nil {
-		log.Fatalf("unknown sensor type: %v", err)
+		slog.Error("unknown sensor type", "error", err)
+		os.Exit(1)
 	}
 
 	var wg sync.WaitGroup
@@ -107,15 +120,15 @@ func main() {
 
 	for reading := range ch {
 		if err := svc.Save(ctx, reading); err != nil {
-			log.Printf("failed to save reading: %v", err)
+			slog.Error("failed to save reading", "error", err)
 		}
 		err := pub.Publish(reading)
 		if err != nil {
-			log.Printf("error on Publish: %v", err)
+			slog.Error("error on publish", "error", err)
 		}
 		go func() {
 			if err := h.Broadcast(reading); err != nil {
-				log.Printf("error on broadcast: %v", err)
+				slog.Error("failed to broadcast reading", "error", err)
 			}
 		}()
 	}

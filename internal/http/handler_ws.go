@@ -1,7 +1,7 @@
 package http
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/gorilla/websocket"
@@ -26,7 +26,7 @@ func NewWsHandler(hub *hub.Hub) *WsHandler {
 func (h *WsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	conn, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println(err)
+		slog.Error("websocket upgrade failed", "error", err)
 		return
 	}
 	h.hub.ServeWs(conn)

@@ -3,7 +3,7 @@ package nats
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	natsgo "github.com/nats-io/nats.go"
@@ -18,16 +18,16 @@ func NewPublisher(url string) (*Publisher, error) {
 	conn, err := natsgo.Connect(
 		url,
 		natsgo.ReconnectHandler(func(conn *natsgo.Conn) {
-			log.Printf("Reconnected to NATS: %v", conn.ConnectedUrl())
+			slog.Info("reconnected to NATS", "url", conn.ConnectedUrl())
 		}),
 		natsgo.MaxReconnects(10),
 		natsgo.ReconnectWait(5*time.Second),
 		natsgo.RetryOnFailedConnect(true),
 		natsgo.ConnectHandler(func(conn *natsgo.Conn) {
-			log.Printf("Connected to NATS: %v", conn.ConnectedUrl())
+			slog.Info("connected to NATS", "url", conn.ConnectedUrl())
 		}),
 		natsgo.DisconnectErrHandler(func(conn *natsgo.Conn, err error) {
-			log.Printf("Disconnected from NATS: %v", err)
+			slog.Warn("disconnected from NATS", "error", err)
 		}))
 	if err != nil {
 		return nil, err
