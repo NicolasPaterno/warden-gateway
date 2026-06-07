@@ -6,6 +6,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/nicaozx/warden-gateway"
+	"github.com/nicaozx/warden-gateway/internal/metrics"
 )
 
 type Hub struct {
@@ -28,10 +29,12 @@ func (h *Hub) Run(ctx context.Context) {
 		select {
 		case client := <-h.register:
 			h.clients[client] = true
+			metrics.WSClientsConnected.Inc()
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
 				close(client.send)
+				metrics.WSClientsConnected.Dec()
 			}
 		case message := <-h.broadcast:
 			for client := range h.clients {
@@ -40,6 +43,7 @@ func (h *Hub) Run(ctx context.Context) {
 				default:
 					close(client.send)
 					delete(h.clients, client)
+					metrics.WSClientsConnected.Dec()
 				}
 			}
 		case <-ctx.Done():
