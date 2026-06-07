@@ -5,16 +5,18 @@ import (
 )
 
 type Config struct {
-	DatabaseURL string
-	NATSUrl     string
-	HTTPPort    string
+	DatabaseURL    string
+	NATSUrl        string
+	HTTPPort       string
+	JaegerEndpoint string
 }
 
 func Load() *Config {
 	return &Config{
-		DatabaseURL: getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/warden_gateway_db"),
-		NATSUrl:     getEnv("NATS_URL", "nats://localhost:4222"),
-		HTTPPort:    getEnv("HTTP_PORT", ":8080"),
+		DatabaseURL:    getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/warden_gateway_db"),
+		NATSUrl:        getEnv("NATS_URL", "nats://localhost:4222"),
+		HTTPPort:       getEnv("HTTP_PORT", ":8080"),
+		JaegerEndpoint: getEnv("JAEGER_ENDPOINT", "localhost:4318"),
 	}
 }
 
