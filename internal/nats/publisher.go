@@ -1,6 +1,7 @@
 package nats
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -8,10 +9,15 @@ import (
 
 	natsgo "github.com/nats-io/nats.go"
 	warden "github.com/nicaozx/warden-gateway"
+	"go.opentelemetry.io/otel"
 )
 
 type Publisher struct {
 	conn *natsgo.Conn
+}
+
+type natsHeaderCarrier struct {
+	header natsgo.Header
 }
 
 func NewPublisher(url string) (*Publisher, error) {
@@ -36,13 +42,21 @@ func NewPublisher(url string) (*Publisher, error) {
 }
 
 // TODO: replace JSON with Protobuf when .proto files are introduced for gRPC
-func (p *Publisher) Publish(reading warden.SensorReading) error {
+func (p *Publisher) Publish(ctx context.Context, reading warden.SensorReading) error {
 	subject := fmt.Sprintf("warden.sensors.v1.%s.%s", reading.Room, reading.Type)
 	readingBytes, err := json.Marshal(reading)
 	if err != nil {
 		return err
 	}
-	return p.conn.Publish(subject, readingBytes)
+
+	msg := natsgo.Msg{
+		Subject: subject,
+		Header:  natsgo.Header{},
+		Data:    readingBytes,
+	}
+
+	otel.GetTextMapPropagator().Inject(ctx, natsHeaderCarrier{msg.Header})
+	return p.conn.PublishMsg(&msg)
 }
 
 func (p *Publisher) Close() error {
@@ -54,4 +68,20 @@ func (p *Publisher) Ping() error {
 		return fmt.Errorf("NATS not connected: %s", p.conn.Status())
 	}
 	return nil
+}
+
+func (c natsHeaderCarrier) Get(key string) string {
+	return c.header.Get(key)
+}
+
+func (c natsHeaderCarrier) Set(key, value string) {
+	c.header.Set(key, value)
+}
+
+func (c natsHeaderCarrier) Keys() []string {
+	result := make([]string, 0, len(c.header))
+	for k := range c.header {
+		result = append(result, k)
+	}
+	return result
 }
