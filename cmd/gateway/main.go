@@ -17,10 +17,13 @@ import (
 	"github.com/nicaozx/warden-gateway/internal/config"
 	httptransport "github.com/nicaozx/warden-gateway/internal/http"
 	"github.com/nicaozx/warden-gateway/internal/hub"
+	"github.com/nicaozx/warden-gateway/internal/metrics"
 	natspub "github.com/nicaozx/warden-gateway/internal/nats"
 	"github.com/nicaozx/warden-gateway/internal/postgres"
 	"github.com/nicaozx/warden-gateway/internal/sensor"
 	"github.com/nicaozx/warden-gateway/internal/service"
+	"github.com/nicaozx/warden-gateway/internal/tracing"
+	"go.opentelemetry.io/otel"
 )
 
 func main() {
@@ -30,6 +33,11 @@ func main() {
 	}))
 	slog.SetDefault(logger)
 
+	if err := metrics.Register(); err != nil {
+		slog.Error("failed to register metrics", "error", err)
+		os.Exit(1)
+	}
+
 	if err := godotenv.Load(); err != nil {
 		slog.Info("no .env file found")
 	}
@@ -38,6 +46,18 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	ch := make(chan warden.SensorReading)
+
+	shutdown, err := tracing.Init(ctx, cfg.JaegerEndpoint)
+	if err != nil {
+		slog.Error("failed to init tracing", "error", err)
+		os.Exit(1)
+	}
+
+	defer func() {
+		if err := shutdown(ctx); err != nil {
+			slog.Error("failed to shutdown tracing", "error", err)
+		}
+	}()
 
 	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
 	if err != nil {
@@ -119,17 +139,25 @@ func main() {
 	}()
 
 	for reading := range ch {
+		ctx, span := otel.Tracer("warden-gateway").Start(ctx, "sensor.reading.process")
+		start := time.Now()
 		if err := svc.Save(ctx, reading); err != nil {
 			slog.Error("failed to save reading", "error", err)
 		}
-		err := pub.Publish(reading)
+		metrics.ReadingsTotal.WithLabelValues(string(reading.Type), reading.Room).Inc()
+
+		err := pub.Publish(ctx, reading)
 		if err != nil {
 			slog.Error("error on publish", "error", err)
+			metrics.NATSPublishErrors.Inc()
 		}
+		metrics.ReadingsLatency.Observe(time.Since(start).Seconds())
+
 		go func() {
 			if err := h.Broadcast(reading); err != nil {
 				slog.Error("failed to broadcast reading", "error", err)
 			}
 		}()
+		span.End()
 	}
 }
