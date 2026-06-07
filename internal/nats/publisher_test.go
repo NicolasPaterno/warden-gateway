@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"testing"
 	"time"
 
@@ -52,7 +51,7 @@ func TestPublisher_Publish(t *testing.T) {
 
 	nc, err := natsgo.Connect(url)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	defer nc.Close()
 
@@ -67,7 +66,12 @@ func TestPublisher_Publish(t *testing.T) {
 	subject := fmt.Sprintf("warden.sensors.v1.%s.%s", reading.Room, reading.Type)
 	sub, err := nc.SubscribeSync(subject)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
+	}
+	// Flush ensures the SUB command reaches the server before we publish.
+	// Without this, PublishMsg can race ahead of the subscription registration.
+	if err = nc.Flush(); err != nil {
+		t.Fatal(err)
 	}
 
 	//publish the message
@@ -79,7 +83,7 @@ func TestPublisher_Publish(t *testing.T) {
 	// Wait for a message
 	msg, err := sub.NextMsg(10 * time.Second)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	// Use the response

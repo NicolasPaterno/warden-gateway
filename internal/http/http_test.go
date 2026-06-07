@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -12,8 +13,14 @@ import (
 	warden "github.com/nicaozx/warden-gateway"
 	httptransport "github.com/nicaozx/warden-gateway/internal/http"
 	"github.com/nicaozx/warden-gateway/internal/hub"
+	"github.com/nicaozx/warden-gateway/internal/metrics"
 	"github.com/nicaozx/warden-gateway/internal/service"
 )
+
+func TestMain(m *testing.M) {
+	_ = metrics.Register()
+	os.Exit(m.Run())
+}
 
 type mockReadingRepository struct{}
 
