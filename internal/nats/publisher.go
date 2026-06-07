@@ -10,7 +10,7 @@ import (
 	natsgo "github.com/nats-io/nats.go"
 	warden "github.com/nicaozx/warden-gateway"
 	"go.opentelemetry.io/otel"
-	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -43,11 +43,10 @@ func NewPublisher(url string) (*Publisher, error) {
 	return &Publisher{conn: conn}, nil
 }
 
-// TODO: replace JSON with Protobuf when .proto files are introduced for gRPC
 func (p *Publisher) Publish(ctx context.Context, reading warden.SensorReading) error {
 	subject := fmt.Sprintf("warden.sensors.v1.%s.%s", reading.Room, reading.Type)
 	protoReading := toProtoReading(reading)
-	readingBytes, err := protojson.Marshal(protoReading)
+	readingBytes, err := proto.Marshal(protoReading)
 	if err != nil {
 		return err
 	}

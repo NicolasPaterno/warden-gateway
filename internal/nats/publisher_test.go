@@ -17,7 +17,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 func protoTypeFor(t warden.SensorType) sensorv1.SensorType {
@@ -121,7 +121,7 @@ func TestPublisher_Publish(t *testing.T) {
 	}
 
 	var received sensorv1.SensorReading
-	if err = protojson.Unmarshal(msg.Data, &received); err != nil {
+	if err = proto.Unmarshal(msg.Data, &received); err != nil {
 		t.Fatal(err)
 	}
 	if received.SensorId != reading.SensorID || received.Room != reading.Room || received.Type != protoTypeFor(reading.Type) {
