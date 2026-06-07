@@ -3,11 +3,18 @@ package hub
 import (
 	"context"
 	"math"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/nicaozx/warden-gateway"
+	"github.com/nicaozx/warden-gateway/internal/metrics"
 )
+
+func TestMain(m *testing.M) {
+	_ = metrics.Register()
+	os.Exit(m.Run())
+}
 
 // createTestClient builds a Client with a nil conn — safe for tests that
 // only exercise the hub's channel logic, never the WebSocket write path.
