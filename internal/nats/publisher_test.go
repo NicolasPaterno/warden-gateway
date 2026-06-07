@@ -2,13 +2,13 @@ package nats_test
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
+	sensorv1 "github.com/NicolasPaterno/warden-proto/gen/go/warden/sensor/v1"
 	natsgo "github.com/nats-io/nats.go"
 	"github.com/nicaozx/warden-gateway"
 	"github.com/nicaozx/warden-gateway/internal/nats"
@@ -17,7 +17,23 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"google.golang.org/protobuf/encoding/protojson"
 )
+
+func protoTypeFor(t warden.SensorType) sensorv1.SensorType {
+	switch t {
+	case warden.Temperature:
+		return sensorv1.SensorType_SENSOR_TYPE_TEMPERATURE
+	case warden.Humidity:
+		return sensorv1.SensorType_SENSOR_TYPE_HUMIDITY
+	case warden.Motion:
+		return sensorv1.SensorType_SENSOR_TYPE_MOTION
+	case warden.CO2:
+		return sensorv1.SensorType_SENSOR_TYPE_CO2
+	default:
+		return sensorv1.SensorType_SENSOR_TYPE_UNSPECIFIED
+	}
+}
 
 func TestMain(m *testing.M) {
 	tp := sdktrace.NewTracerProvider()
@@ -104,11 +120,11 @@ func TestPublisher_Publish(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var received warden.SensorReading
-	if err = json.Unmarshal(msg.Data, &received); err != nil {
+	var received sensorv1.SensorReading
+	if err = protojson.Unmarshal(msg.Data, &received); err != nil {
 		t.Fatal(err)
 	}
-	if received.SensorID != reading.SensorID || received.Room != reading.Room || received.Type != reading.Type {
+	if received.SensorId != reading.SensorID || received.Room != reading.Room || received.Type != protoTypeFor(reading.Type) {
 		t.Errorf("received wrong reading: got %+v, want %+v", received, reading)
 	}
 }

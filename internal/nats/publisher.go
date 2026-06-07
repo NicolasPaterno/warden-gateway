@@ -2,14 +2,16 @@ package nats
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
 
+	sensorv1 "github.com/NicolasPaterno/warden-proto/gen/go/warden/sensor/v1"
 	natsgo "github.com/nats-io/nats.go"
 	warden "github.com/nicaozx/warden-gateway"
 	"go.opentelemetry.io/otel"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Publisher struct {
@@ -44,7 +46,8 @@ func NewPublisher(url string) (*Publisher, error) {
 // TODO: replace JSON with Protobuf when .proto files are introduced for gRPC
 func (p *Publisher) Publish(ctx context.Context, reading warden.SensorReading) error {
 	subject := fmt.Sprintf("warden.sensors.v1.%s.%s", reading.Room, reading.Type)
-	readingBytes, err := json.Marshal(reading)
+	protoReading := toProtoReading(reading)
+	readingBytes, err := protojson.Marshal(protoReading)
 	if err != nil {
 		return err
 	}
@@ -84,4 +87,30 @@ func (c natsHeaderCarrier) Keys() []string {
 		result = append(result, k)
 	}
 	return result
+}
+
+func toProtoReading(r warden.SensorReading) *sensorv1.SensorReading {
+	return &sensorv1.SensorReading{
+		SensorId:  r.SensorID,
+		Room:      r.Room,
+		Type:      toProtoSensorType(r.Type),
+		Value:     r.Value,
+		Unit:      r.Unit,
+		Timestamp: timestamppb.New(r.Timestamp),
+	}
+}
+
+func toProtoSensorType(t warden.SensorType) sensorv1.SensorType {
+	switch t {
+	case warden.Temperature:
+		return sensorv1.SensorType_SENSOR_TYPE_TEMPERATURE
+	case warden.Humidity:
+		return sensorv1.SensorType_SENSOR_TYPE_HUMIDITY
+	case warden.Motion:
+		return sensorv1.SensorType_SENSOR_TYPE_MOTION
+	case warden.CO2:
+		return sensorv1.SensorType_SENSOR_TYPE_CO2
+	default:
+		return sensorv1.SensorType_SENSOR_TYPE_UNSPECIFIED
+	}
 }
