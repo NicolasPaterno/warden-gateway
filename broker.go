@@ -1,7 +1,9 @@
 package warden
 
+import "context"
+
 type Broker interface {
-	Publish(reading SensorReading) error
+	Publish(ctx context.Context, reading SensorReading) error
 	Close() error
 	Ping() error
 }
