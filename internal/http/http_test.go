@@ -27,9 +27,9 @@ func (m *mockReadingRepository) GetByRoomAndType(_ context.Context, _ string, _ 
 
 type mockBroker struct{}
 
-func (m *mockBroker) Publish(_ warden.SensorReading) error { return nil }
-func (m *mockBroker) Close() error                         { return nil }
-func (m *mockBroker) Ping() error                          { return nil }
+func (m *mockBroker) Publish(_ context.Context, _ warden.SensorReading) error { return nil }
+func (m *mockBroker) Close() error                                            { return nil }
+func (m *mockBroker) Ping() error                                             { return nil }
 
 func newTestRouter(h *hub.Hub) http.Handler {
 	wsHandler := httptransport.NewWsHandler(h)
