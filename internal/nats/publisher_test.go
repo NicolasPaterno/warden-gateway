@@ -71,7 +71,7 @@ func TestPublisher_Publish(t *testing.T) {
 	}
 
 	//publish the message
-	err = publish.Publish(reading)
+	err = publish.Publish(ctx, reading)
 	if err != nil {
 		t.Fatal(err)
 	}
