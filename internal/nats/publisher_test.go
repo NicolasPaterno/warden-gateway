@@ -125,7 +125,7 @@ func TestPublisher_Publish(t *testing.T) {
 		t.Fatal(err)
 	}
 	if received.SensorId != reading.SensorID || received.Room != reading.Room || received.Type != protoTypeFor(reading.Type) {
-		t.Errorf("received wrong reading: got %+v, want %+v", received, reading)
+		t.Errorf("received wrong reading: got %+v, want %+v", &received, reading)
 	}
 }
 
