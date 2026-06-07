@@ -9,6 +9,7 @@ import (
 
 	"github.com/nicaozx/warden-gateway"
 	"github.com/nicaozx/warden-gateway/internal/metrics"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 
 func TestMain(m *testing.M) {
@@ -142,6 +143,66 @@ func TestHub_Broadcast_InvalidReading(t *testing.T) {
 	err := hub.Broadcast(warden.SensorReading{Value: math.NaN()})
 	if err == nil {
 		t.Error("expected error for NaN value, got nil")
+	}
+}
+
+// TestHub_RegisterClient_IncrementsGauge verifies that the WSClientsConnected
+// Prometheus gauge increases by 1 when a client registers with the hub.
+func TestHub_RegisterClient_IncrementsGauge(t *testing.T) {
+	hub := NewHub()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go hub.Run(ctx)
+
+	before := testutil.ToFloat64(metrics.WSClientsConnected)
+
+	client := createTestClient(hub, 64)
+	hub.register <- client
+
+	// Sync barrier: the hub processes events sequentially. A successful broadcast+receive
+	// guarantees the preceding register was already handled — no sleep needed.
+	_ = hub.Broadcast(warden.SensorReading{Type: warden.Temperature, Value: 22.5})
+	receiveWithTimeout(t, client.send, time.Second)
+
+	after := testutil.ToFloat64(metrics.WSClientsConnected)
+	if after != before+1 {
+		t.Errorf("WSClientsConnected: expected %.0f after register, got %.0f", before+1, after)
+	}
+}
+
+// TestHub_UnregisterClient_DecrementsGauge verifies that the WSClientsConnected
+// Prometheus gauge decreases by 1 when a client unregisters from the hub.
+func TestHub_UnregisterClient_DecrementsGauge(t *testing.T) {
+	hub := NewHub()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go hub.Run(ctx)
+
+	client := createTestClient(hub, 64)
+	hub.register <- client
+
+	// Sync: ensure the register was processed before reading the gauge.
+	_ = hub.Broadcast(warden.SensorReading{Type: warden.Temperature, Value: 22.5})
+	receiveWithTimeout(t, client.send, time.Second)
+
+	afterRegister := testutil.ToFloat64(metrics.WSClientsConnected)
+
+	hub.unregister <- client
+
+	// Sync: the hub closes client.send as part of unregister processing.
+	// Receiving the channel close confirms the hub finished the unregister case.
+	select {
+	case _, ok := <-client.send:
+		if ok {
+			t.Fatal("expected send channel to be closed after unregister")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout: hub did not process unregister")
+	}
+
+	afterUnregister := testutil.ToFloat64(metrics.WSClientsConnected)
+	if afterUnregister != afterRegister-1 {
+		t.Errorf("WSClientsConnected: expected %.0f after unregister, got %.0f", afterRegister-1, afterUnregister)
 	}
 }
 
