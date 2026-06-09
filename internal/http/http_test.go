@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
+	warden "github.com/NicolasPaterno/warden-gateway"
+	httptransport "github.com/NicolasPaterno/warden-gateway/internal/http"
+	"github.com/NicolasPaterno/warden-gateway/internal/hub"
+	"github.com/NicolasPaterno/warden-gateway/internal/metrics"
+	"github.com/NicolasPaterno/warden-gateway/internal/service"
 	"github.com/gorilla/websocket"
-	warden "github.com/nicaozx/warden-gateway"
-	httptransport "github.com/nicaozx/warden-gateway/internal/http"
-	"github.com/nicaozx/warden-gateway/internal/hub"
-	"github.com/nicaozx/warden-gateway/internal/metrics"
-	"github.com/nicaozx/warden-gateway/internal/service"
 )
 
 func TestMain(m *testing.M) {

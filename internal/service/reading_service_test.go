@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	warden "github.com/nicaozx/warden-gateway"
-	"github.com/nicaozx/warden-gateway/internal/service"
+	warden "github.com/NicolasPaterno/warden-gateway"
+	"github.com/NicolasPaterno/warden-gateway/internal/service"
 	"github.com/stretchr/testify/assert"
 )
 

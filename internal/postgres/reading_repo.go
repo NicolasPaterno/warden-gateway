@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/NicolasPaterno/warden-gateway"
+	"github.com/NicolasPaterno/warden-gateway/db/generated"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/nicaozx/warden-gateway"
-	"github.com/nicaozx/warden-gateway/db/generated"
 )
 
 type ReadingRepo struct {

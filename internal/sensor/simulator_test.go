@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	warden "github.com/nicaozx/warden-gateway"
+	warden "github.com/NicolasPaterno/warden-gateway"
 )
 
 func TestNewSensor_ValidType(t *testing.T) {

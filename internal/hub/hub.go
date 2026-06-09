@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/NicolasPaterno/warden-gateway"
+	"github.com/NicolasPaterno/warden-gateway/internal/metrics"
 	"github.com/gorilla/websocket"
-	"github.com/nicaozx/warden-gateway"
-	"github.com/nicaozx/warden-gateway/internal/metrics"
 )
 
 type Hub struct {

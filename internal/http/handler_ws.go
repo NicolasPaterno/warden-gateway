@@ -4,8 +4,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/NicolasPaterno/warden-gateway/internal/hub"
 	"github.com/gorilla/websocket"
-	"github.com/nicaozx/warden-gateway/internal/hub"
 )
 
 type WsHandler struct {

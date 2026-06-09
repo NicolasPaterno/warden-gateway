@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	warden "github.com/nicaozx/warden-gateway"
-	httptransport "github.com/nicaozx/warden-gateway/internal/http"
-	"github.com/nicaozx/warden-gateway/internal/service"
+	warden "github.com/NicolasPaterno/warden-gateway"
+	httptransport "github.com/NicolasPaterno/warden-gateway/internal/http"
+	"github.com/NicolasPaterno/warden-gateway/internal/service"
 	"github.com/stretchr/testify/assert"
 )
 

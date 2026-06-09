@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"time"
 
-	warden "github.com/nicaozx/warden-gateway"
+	warden "github.com/NicolasPaterno/warden-gateway"
 )
 
 type Sensor struct {

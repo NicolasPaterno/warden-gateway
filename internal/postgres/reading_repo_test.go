@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
+	warden "github.com/NicolasPaterno/warden-gateway"
+	"github.com/NicolasPaterno/warden-gateway/internal/postgres"
 	"github.com/jackc/pgx/v5/pgxpool"
-	warden "github.com/nicaozx/warden-gateway"
-	"github.com/nicaozx/warden-gateway/internal/postgres"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"

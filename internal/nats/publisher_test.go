@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/NicolasPaterno/warden-gateway"
+	"github.com/NicolasPaterno/warden-gateway/internal/nats"
 	sensorv1 "github.com/NicolasPaterno/warden-proto/gen/go/warden/sensor/v1"
 	natsgo "github.com/nats-io/nats.go"
-	"github.com/nicaozx/warden-gateway"
-	"github.com/nicaozx/warden-gateway/internal/nats"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"go.opentelemetry.io/otel"

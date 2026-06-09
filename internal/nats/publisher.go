@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"time"
 
+	warden "github.com/NicolasPaterno/warden-gateway"
 	sensorv1 "github.com/NicolasPaterno/warden-proto/gen/go/warden/sensor/v1"
 	natsgo "github.com/nats-io/nats.go"
-	warden "github.com/nicaozx/warden-gateway"
 	"go.opentelemetry.io/otel"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"

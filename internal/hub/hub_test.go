@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nicaozx/warden-gateway"
-	"github.com/nicaozx/warden-gateway/internal/metrics"
+	"github.com/NicolasPaterno/warden-gateway"
+	"github.com/NicolasPaterno/warden-gateway/internal/metrics"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 

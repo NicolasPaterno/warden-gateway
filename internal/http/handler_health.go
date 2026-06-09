@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/NicolasPaterno/warden-gateway"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/nicaozx/warden-gateway"
 )
 
 type HealthHandler struct {

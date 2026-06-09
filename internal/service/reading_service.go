@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/nicaozx/warden-gateway"
+	"github.com/NicolasPaterno/warden-gateway"
 )
 
 type ReadingService struct {

@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/nicaozx/warden-gateway"
-	"github.com/nicaozx/warden-gateway/internal/service"
+	"github.com/NicolasPaterno/warden-gateway"
+	"github.com/NicolasPaterno/warden-gateway/internal/service"
 )
 
 type ReadingsHandler struct {
