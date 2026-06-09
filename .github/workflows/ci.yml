@@ -83,7 +83,7 @@ jobs:
       - name: Checkout warden-infra
         uses: actions/checkout@v4
         with:
-          repository: nicaozx/warden-infra
+          repository: NicolasPaterno/warden-infra
           path: warden-infra
 
       - name: Configure kubectl
