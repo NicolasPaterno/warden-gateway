@@ -23,6 +23,7 @@ func NewReadingRepo(db generated.DBTX) *ReadingRepo {
 
 func (r *ReadingRepo) Save(ctx context.Context, reading warden.SensorReading) error {
 	params := generated.InsertReadingParams{
+		TenantID: reading.TenantID,
 		SensorID: reading.SensorID,
 		Room:     reading.Room,
 		Type:     string(reading.Type),
@@ -33,12 +34,13 @@ func (r *ReadingRepo) Save(ctx context.Context, reading warden.SensorReading) er
 	return r.queries.InsertReading(ctx, params)
 }
 
-func (r *ReadingRepo) GetByRoomAndType(ctx context.Context, room string, sensorType warden.SensorType, from, to time.Time) ([]warden.SensorReading, error) {
+func (r *ReadingRepo) GetByRoomAndType(ctx context.Context, tenantID, room string, sensorType warden.SensorType, from, to time.Time) ([]warden.SensorReading, error) {
 	params := generated.GetReadingsByRoomAndTypeParams{
-		Room:   room,
-		Type:   string(sensorType),
-		Time:   pgtype.Timestamptz{Time: from, Valid: true},
-		Time_2: pgtype.Timestamptz{Time: to, Valid: true},
+		TenantID: tenantID,
+		Room:     room,
+		Type:     string(sensorType),
+		Time:     pgtype.Timestamptz{Time: from, Valid: true},
+		Time_2:   pgtype.Timestamptz{Time: to, Valid: true},
 	}
 	response, err := r.queries.GetReadingsByRoomAndType(ctx, params)
 	if err != nil {
@@ -49,6 +51,7 @@ func (r *ReadingRepo) GetByRoomAndType(ctx context.Context, room string, sensorT
 
 	for _, row := range response {
 		results = append(results, warden.SensorReading{
+			TenantID:  row.TenantID,
 			SensorID:  row.SensorID,
 			Room:      row.Room,
 			Type:      warden.SensorType(row.Type),

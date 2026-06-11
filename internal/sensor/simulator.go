@@ -11,19 +11,21 @@ import (
 
 type Sensor struct {
 	id       string
+	tenantID string
 	room     string
 	sType    warden.SensorType
 	interval time.Duration
 	unit     string
 }
 
-func NewSensor(id, room string, sensorType warden.SensorType, interval time.Duration) (*Sensor, error) {
+func NewSensor(id, tenantID, room string, sensorType warden.SensorType, interval time.Duration) (*Sensor, error) {
 	unit, err := unitForType(sensorType)
 	if err != nil {
 		return nil, err
 	}
 	return &Sensor{
 		id:       id,
+		tenantID: tenantID,
 		room:     room,
 		sType:    sensorType,
 		interval: interval,
@@ -41,6 +43,7 @@ func (s *Sensor) Run(ctx context.Context, out chan<- warden.SensorReading) {
 		select {
 		case t := <-ticker.C:
 			out <- warden.SensorReading{
+				TenantID:  s.tenantID,
 				SensorID:  s.id,
 				Room:      s.room,
 				Type:      s.sType,

@@ -12,6 +12,7 @@ const (
 )
 
 type SensorReading struct {
+	TenantID  string     `json:"tenant_id"`
 	SensorID  string     `json:"sensor_id"`
 	Room      string     `json:"room"`
 	Type      SensorType `json:"type"`

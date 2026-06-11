@@ -4,6 +4,7 @@ sql:
     queries: "db/queries/readings.sql"
     schema:
       - "db/migration/000001_create_readings.up.sql"
+      - "db/migration/000002_add_tenant.up.sql"
     gen:
       go:
         package: "generated"

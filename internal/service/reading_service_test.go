@@ -21,7 +21,7 @@ func (m *mockReadingRepository) Save(_ context.Context, _ warden.SensorReading) 
 	return m.saveErr
 }
 
-func (m *mockReadingRepository) GetByRoomAndType(_ context.Context, _ string, _ warden.SensorType, _, _ time.Time) ([]warden.SensorReading, error) {
+func (m *mockReadingRepository) GetByRoomAndType(_ context.Context, _, _ string, _ warden.SensorType, _, _ time.Time) ([]warden.SensorReading, error) {
 	return m.getReadings, m.getErr
 }
 
@@ -97,7 +97,7 @@ func TestReadingService_GetByRoomAndType(t *testing.T) {
 				getReadings: tt.repoReadings,
 				getErr:      tt.repoErr,
 			})
-			result, err := svc.GetByRoomAndType(context.Background(), "bedroom", warden.Temperature, time.Now(), time.Now())
+			result, err := svc.GetByRoomAndType(context.Background(), "tenant-1", "bedroom", warden.Temperature, time.Now(), time.Now())
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {

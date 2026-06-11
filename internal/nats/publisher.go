@@ -96,6 +96,7 @@ func toProtoReading(r warden.SensorReading) *sensorv1.SensorReading {
 		Value:     r.Value,
 		Unit:      r.Unit,
 		Timestamp: timestamppb.New(r.Timestamp),
+		TenantId:  r.TenantID,
 	}
 }
 

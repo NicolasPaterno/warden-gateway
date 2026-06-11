@@ -12,24 +12,37 @@ import (
 )
 
 const getReadingsByRoomAndType = `-- name: GetReadingsByRoomAndType :many
-SELECT sensor_id, room, type, value, unit, time
+SELECT tenant_id, sensor_id, room, type, value, unit, time
 FROM readings
-WHERE room = $1
-  AND type = $2
-  AND time >= $3
-  AND time <= $4
+WHERE tenant_id = $1
+  AND room = $2
+  AND type = $3
+  AND time >= $4
+  AND time <= $5
 ORDER BY time DESC
 `
 
 type GetReadingsByRoomAndTypeParams struct {
-	Room   string
-	Type   string
-	Time   pgtype.Timestamptz
-	Time_2 pgtype.Timestamptz
+	TenantID string
+	Room     string
+	Type     string
+	Time     pgtype.Timestamptz
+	Time_2   pgtype.Timestamptz
 }
 
-func (q *Queries) GetReadingsByRoomAndType(ctx context.Context, arg GetReadingsByRoomAndTypeParams) ([]Reading, error) {
+type GetReadingsByRoomAndTypeRow struct {
+	TenantID string
+	SensorID string
+	Room     string
+	Type     string
+	Value    float64
+	Unit     string
+	Time     pgtype.Timestamptz
+}
+
+func (q *Queries) GetReadingsByRoomAndType(ctx context.Context, arg GetReadingsByRoomAndTypeParams) ([]GetReadingsByRoomAndTypeRow, error) {
 	rows, err := q.db.Query(ctx, getReadingsByRoomAndType,
+		arg.TenantID,
 		arg.Room,
 		arg.Type,
 		arg.Time,
@@ -39,10 +52,11 @@ func (q *Queries) GetReadingsByRoomAndType(ctx context.Context, arg GetReadingsB
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Reading
+	var items []GetReadingsByRoomAndTypeRow
 	for rows.Next() {
-		var i Reading
+		var i GetReadingsByRoomAndTypeRow
 		if err := rows.Scan(
+			&i.TenantID,
 			&i.SensorID,
 			&i.Room,
 			&i.Type,
@@ -61,11 +75,12 @@ func (q *Queries) GetReadingsByRoomAndType(ctx context.Context, arg GetReadingsB
 }
 
 const insertReading = `-- name: InsertReading :exec
-INSERT INTO readings (sensor_id, room, type, value, unit, time)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO readings (tenant_id, sensor_id, room, type, value, unit, time)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 `
 
 type InsertReadingParams struct {
+	TenantID string
 	SensorID string
 	Room     string
 	Type     string
@@ -76,6 +91,7 @@ type InsertReadingParams struct {
 
 func (q *Queries) InsertReading(ctx context.Context, arg InsertReadingParams) error {
 	_, err := q.db.Exec(ctx, insertReading,
+		arg.TenantID,
 		arg.SensorID,
 		arg.Room,
 		arg.Type,

@@ -51,9 +51,12 @@ func setupTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 			type        TEXT        NOT NULL,
 			value       FLOAT8      NOT NULL,
 			unit        TEXT        NOT NULL,
-			time        TIMESTAMPTZ NOT NULL
+			time        TIMESTAMPTZ NOT NULL,
+			tenant_id   TEXT        NOT NULL DEFAULT ''
 		);
 		SELECT create_hypertable('readings', 'time', if_not_exists => TRUE);
+		CREATE INDEX IF NOT EXISTS idx_readings_tenant
+			ON readings (tenant_id, room, type, time DESC);
 	`)
 	require.NoError(t, err)
 
@@ -93,9 +96,10 @@ func TestReadingRepo_GetByRoomAndType(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 
 	readings := []warden.SensorReading{
-		{SensorID: "s1", Room: "bedroom", Type: warden.Temperature, Value: 22.5, Unit: "°C", Timestamp: now},
-		{SensorID: "s1", Room: "bedroom", Type: warden.Temperature, Value: 23.0, Unit: "°C", Timestamp: now.Add(-time.Minute)},
-		{SensorID: "s2", Room: "kitchen", Type: warden.Humidity, Value: 60.0, Unit: "%", Timestamp: now},
+		{TenantID: "tenant-1", SensorID: "s1", Room: "bedroom", Type: warden.Temperature, Value: 22.5, Unit: "°C", Timestamp: now},
+		{TenantID: "tenant-1", SensorID: "s1", Room: "bedroom", Type: warden.Temperature, Value: 23.0, Unit: "°C", Timestamp: now.Add(-time.Minute)},
+		{TenantID: "tenant-1", SensorID: "s2", Room: "kitchen", Type: warden.Humidity, Value: 60.0, Unit: "%", Timestamp: now},
+		{TenantID: "tenant-2", SensorID: "s3", Room: "bedroom", Type: warden.Temperature, Value: 99.0, Unit: "°C", Timestamp: now},
 	}
 
 	for _, r := range readings {
@@ -104,6 +108,7 @@ func TestReadingRepo_GetByRoomAndType(t *testing.T) {
 
 	result, err := repo.GetByRoomAndType(
 		context.Background(),
+		"tenant-1",
 		"bedroom",
 		warden.Temperature,
 		now.Add(-time.Hour),

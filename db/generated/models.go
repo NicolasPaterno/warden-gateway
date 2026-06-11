@@ -15,4 +15,5 @@ type Reading struct {
 	Value    float64
 	Unit     string
 	Time     pgtype.Timestamptz
+	TenantID string
 }

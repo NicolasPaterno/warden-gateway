@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewSensor_ValidType(t *testing.T) {
-	s, err := NewSensor("sensor-1", "living-room", warden.Temperature, time.Second)
+	s, err := NewSensor("sensor-1", "tenant-1", "living-room", warden.Temperature, time.Second)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -19,7 +19,7 @@ func TestNewSensor_ValidType(t *testing.T) {
 }
 
 func TestNewSensor_InvalidType(t *testing.T) {
-	s, err := NewSensor("sensor-1", "living-room", warden.SensorType("smoke"), time.Second)
+	s, err := NewSensor("sensor-1", "tenant-1", "living-room", warden.SensorType("smoke"), time.Second)
 	if err == nil {
 		t.Fatalf("expected error, got none")
 	}
@@ -91,7 +91,7 @@ func TestUnitForType_UnknownType(t *testing.T) {
 }
 
 func TestRun_ReadingsInRange(t *testing.T) {
-	s, err := NewSensor("sensor-1", "living-room", warden.Temperature, 10*time.Millisecond)
+	s, err := NewSensor("sensor-1", "tenant-1", "living-room", warden.Temperature, 10*time.Millisecond)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
