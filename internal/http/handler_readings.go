@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/NicolasPaterno/warden-auth/authn"
 	"github.com/NicolasPaterno/warden-gateway"
 	"github.com/NicolasPaterno/warden-gateway/internal/service"
 )
@@ -20,6 +21,14 @@ func NewReadingsHandler(svc *service.ReadingService) *ReadingsHandler {
 func (h *ReadingsHandler) GetByRoomAndType(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	claims, ok := authn.ClaimsFromContext(ctx)
+	if !ok || claims.Tenant == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	tenantID := claims.Tenant
+
 	room := r.URL.Query().Get("room")
 	if room == "" {
 		http.Error(w, "room is required", http.StatusBadRequest)
@@ -43,7 +52,7 @@ func (h *ReadingsHandler) GetByRoomAndType(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	readings, err := h.svc.GetByRoomAndType(ctx, room, warden.SensorType(sensorType), from, to)
+	readings, err := h.svc.GetByRoomAndType(ctx, tenantID, room, warden.SensorType(sensorType), from, to)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

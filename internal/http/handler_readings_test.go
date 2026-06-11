@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	auth "github.com/NicolasPaterno/warden-auth"
+	"github.com/NicolasPaterno/warden-auth/authn"
 	warden "github.com/NicolasPaterno/warden-gateway"
 	httptransport "github.com/NicolasPaterno/warden-gateway/internal/http"
 	"github.com/NicolasPaterno/warden-gateway/internal/service"
@@ -24,7 +26,7 @@ func (m *mockReadingRepositoryForHandler) Save(_ context.Context, _ warden.Senso
 	return nil
 }
 
-func (m *mockReadingRepositoryForHandler) GetByRoomAndType(_ context.Context, _ string, _ warden.SensorType, _, _ time.Time) ([]warden.SensorReading, error) {
+func (m *mockReadingRepositoryForHandler) GetByRoomAndType(_ context.Context, _, _ string, _ warden.SensorType, _, _ time.Time) ([]warden.SensorReading, error) {
 	return m.getReadings, m.getErr
 }
 
@@ -42,34 +44,34 @@ func TestReadingsHandler_GetByRoomAndType(t *testing.T) {
 	}{
 		{
 			name:         "returns readings as JSON",
-			query:        "?room=bedroom&type=temperature&from=2026-01-01T00:00:00Z&to=2027-01-01T00:00:00Z",
+			query:        "?tenant=tenant-1&room=bedroom&type=temperature&from=2026-01-01T00:00:00Z&to=2027-01-01T00:00:00Z",
 			repoReadings: readings,
 			repoErr:      nil,
 			wantStatus:   http.StatusOK,
 		},
 		{
 			name:       "missing room returns 400",
-			query:      "?type=temperature&from=2026-01-01T00:00:00Z&to=2027-01-01T00:00:00Z",
+			query:      "?tenant=tenant-1&type=temperature&from=2026-01-01T00:00:00Z&to=2027-01-01T00:00:00Z",
 			wantStatus: http.StatusBadRequest,
 		},
 		{
 			name:       "missing type returns 400",
-			query:      "?room=bedroom&from=2026-01-01T00:00:00Z&to=2027-01-01T00:00:00Z",
+			query:      "?tenant=tenant-1&room=bedroom&from=2026-01-01T00:00:00Z&to=2027-01-01T00:00:00Z",
 			wantStatus: http.StatusBadRequest,
 		},
 		{
 			name:       "invalid from returns 400",
-			query:      "?room=bedroom&type=temperature&from=invalid&to=2027-01-01T00:00:00Z",
+			query:      "?tenant=tenant-1&room=bedroom&type=temperature&from=invalid&to=2027-01-01T00:00:00Z",
 			wantStatus: http.StatusBadRequest,
 		},
 		{
 			name:       "invalid to returns 400",
-			query:      "?room=bedroom&type=temperature&from=2026-01-01T00:00:00Z&to=invalid",
+			query:      "?tenant=tenant-1&room=bedroom&type=temperature&from=2026-01-01T00:00:00Z&to=invalid",
 			wantStatus: http.StatusBadRequest,
 		},
 		{
 			name:       "service error returns 500",
-			query:      "?room=bedroom&type=temperature&from=2026-01-01T00:00:00Z&to=2027-01-01T00:00:00Z",
+			query:      "?tenant=tenant-1&room=bedroom&type=temperature&from=2026-01-01T00:00:00Z&to=2027-01-01T00:00:00Z",
 			repoErr:    errors.New("db error"),
 			wantStatus: http.StatusInternalServerError,
 		},
@@ -84,6 +86,7 @@ func TestReadingsHandler_GetByRoomAndType(t *testing.T) {
 			handler := httptransport.NewReadingsHandler(svc)
 
 			req := httptest.NewRequest(http.MethodGet, "/api/readings"+tt.query, nil)
+			req = req.WithContext(authn.WithClaims(req.Context(), &auth.Claims{Tenant: "tenant-1"}))
 			w := httptest.NewRecorder()
 			handler.GetByRoomAndType(w, req)
 
