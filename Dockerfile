@@ -1,13 +1,23 @@
 FROM golang:1.26-alpine AS builder
 
-WORKDIR /app
+# Multi-repo build: the build context must be the parent directory holding both
+# warden-gateway and warden-auth, because go.mod has
+# `replace github.com/NicolasPaterno/warden-auth => ../warden-auth` (sibling repo).
+# Build with context at the parent, e.g.:
+#   docker build -f warden-gateway/Dockerfile -t warden-gateway ..
+WORKDIR /src
 
-COPY go.mod go.sum ./
+COPY warden-auth/go.mod warden-auth/go.sum ./warden-auth/
+COPY warden-gateway/go.mod warden-gateway/go.sum ./warden-gateway/
+WORKDIR /src/warden-gateway
 RUN go mod download
 
-COPY . .
+WORKDIR /src
+COPY warden-auth/ ./warden-auth/
+COPY warden-gateway/ ./warden-gateway/
 
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o gateway ./cmd/gateway/main.go
+WORKDIR /src/warden-gateway
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /gateway ./cmd/gateway
 
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -17,7 +27,7 @@ RUN addgroup -S warden && adduser -S gateway -G warden
 
 WORKDIR /app
 
-COPY --from=builder /app/gateway .
+COPY --from=builder /gateway .
 
 USER gateway
 

@@ -1,0 +1,11 @@
+# Build context is the parent dir; only these two repos are needed.
+*
+!warden-auth
+!warden-gateway
+
+# Trim heavy/irrelevant bits from the two repos we keep.
+**/.git
+**/bin
+**/coverage.out
+**/*.log
+warden-auth/dev-private.pem
