@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/NicolasPaterno/warden-auth/authn"
 	warden "github.com/NicolasPaterno/warden-gateway"
 	"github.com/NicolasPaterno/warden-gateway/internal/config"
 	httptransport "github.com/NicolasPaterno/warden-gateway/internal/http"
@@ -85,8 +86,33 @@ func main() {
 
 	h := hub.NewHub()
 	go h.Run(ctx)
-	wsHandler := httptransport.NewWsHandler(h)
-	router := httptransport.NewRouter(wsHandler, readingHandler, healthHandler)
+
+	// The hub is fed by NATS (not the local channel), so every pod's hub
+	// receives readings from ALL pods and can serve any tenant regardless of
+	// which pod a client landed on.
+	sub, err := natspub.NewSubscriber(cfg.NATSUrl)
+	if err != nil {
+		slog.Error("failed to connect subscriber to NATS", "error", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := sub.Close(); err != nil {
+			slog.Error("failed to drain NATS subscriber", "error", err)
+		}
+	}()
+
+	if err := sub.Subscribe(ctx, "warden.sensors.v1.>", func(reading warden.SensorReading) {
+		if err := h.Broadcast(reading); err != nil {
+			slog.Error("failed to broadcast reading", "error", err)
+		}
+	}); err != nil {
+		slog.Error("failed to subscribe to NATS", "error", err)
+		os.Exit(1)
+	}
+
+	verifier := authn.New(cfg.JWKSURL, cfg.Issuer, cfg.Audience)
+	wsHandler := httptransport.NewWsHandler(h, verifier)
+	router := httptransport.NewRouter(wsHandler, readingHandler, healthHandler, verifier)
 
 	go func() {
 		if err := http.ListenAndServe(cfg.HTTPPort, router); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -95,19 +121,19 @@ func main() {
 		}
 	}()
 
-	sensor1, err := sensor.NewSensor("s1", "bedroom", warden.Humidity, 800*time.Millisecond)
+	sensor1, err := sensor.NewSensor("s1", "tenant-a", "bedroom", warden.Motion, 800*time.Millisecond)
 	if err != nil {
 		slog.Error("unknown sensor type", "error", err)
 		os.Exit(1)
 	}
 
-	sensor2, err := sensor.NewSensor("s2", "bedroom", warden.Temperature, 500*time.Millisecond)
+	sensor2, err := sensor.NewSensor("s2", "tenant-a", "bedroom", warden.Temperature, 500*time.Millisecond)
 	if err != nil {
 		slog.Error("unknown sensor type", "error", err)
 		os.Exit(1)
 	}
 
-	sensor3, err := sensor.NewSensor("s3", "bedroom", warden.CO2, 200*time.Millisecond)
+	sensor3, err := sensor.NewSensor("s3", "tenant-b", "bedroom", warden.CO2, 200*time.Millisecond)
 	if err != nil {
 		slog.Error("unknown sensor type", "error", err)
 		os.Exit(1)
@@ -153,11 +179,8 @@ func main() {
 		}
 		metrics.ReadingsLatency.Observe(time.Since(start).Seconds())
 
-		go func() {
-			if err := h.Broadcast(reading); err != nil {
-				slog.Error("failed to broadcast reading", "error", err)
-			}
-		}()
+		// No local h.Broadcast here: the hub is fed by the NATS subscriber
+		// above, so this reading reaches every pod's hub (including this one).
 		span.End()
 	}
 }

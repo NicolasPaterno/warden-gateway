@@ -9,6 +9,9 @@ type Config struct {
 	NATSUrl        string
 	HTTPPort       string
 	JaegerEndpoint string
+	JWKSURL        string
+	Issuer         string
+	Audience       string
 }
 
 func Load() *Config {
@@ -17,6 +20,9 @@ func Load() *Config {
 		NATSUrl:        getEnv("NATS_URL", "nats://localhost:4222"),
 		HTTPPort:       getEnv("HTTP_PORT", ":8080"),
 		JaegerEndpoint: getEnv("JAEGER_ENDPOINT", "localhost:4318"),
+		JWKSURL:        getEnv("JWKS_URL", "http://localhost:8082/.well-known/jwks.json"),
+		Issuer:         getEnv("ISSUER", "warden-auth"),
+		Audience:       getEnv("AUDIENCE", "warden-gateway"),
 	}
 }
 

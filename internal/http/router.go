@@ -3,18 +3,19 @@ package http
 import (
 	"net/http"
 
+	"github.com/NicolasPaterno/warden-auth/authn"
 	"github.com/go-chi/chi/v5"
 	_ "github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-func NewRouter(wsHandler *WsHandler, readingsHandler *ReadingsHandler, healthHandler *HealthHandler) http.Handler {
+func NewRouter(wsHandler *WsHandler, readingsHandler *ReadingsHandler, healthHandler *HealthHandler, verifier *authn.Verifier) http.Handler {
 	r := chi.NewRouter()
 
 	//API
 	r.Handle("/ws", wsHandler)
-	r.Get("/api/readings", readingsHandler.GetByRoomAndType)
+	r.With(verifier.Middleware).Get("/api/readings", readingsHandler.GetByRoomAndType)
 
 	//server health
 	r.Get("/health/live", healthHandler.Live)
