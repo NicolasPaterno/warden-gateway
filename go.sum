@@ -6,6 +6,8 @@ github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c h1:udKWzYgxTojEK
 github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c/go.mod h1:xomTg63KZ2rFqZQzSB4Vz2SUXa1BpHTVz9L5PTmPC4E=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
+github.com/NicolasPaterno/warden-auth v0.1.0 h1:4lXUKXp8NzHCWxfSuymbvBMxEhp5vLI3zh8ofT56znc=
+github.com/NicolasPaterno/warden-auth v0.1.0/go.mod h1:8a9WHphsv5PYdZYpl/Uy1OTsL0xGDe6dtlGkI3VeU7k=
 github.com/NicolasPaterno/warden-proto v0.2.0 h1:jqRYn6z8KV0V6ofPI4g2V2GFUtemvFYmQ7GmvmZMj+4=
 github.com/NicolasPaterno/warden-proto v0.2.0/go.mod h1:bDx48V6pRJbjAaFmcV24Wp5z5pgDnp3e1oisebdOa3M=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
