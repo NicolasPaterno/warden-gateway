@@ -1,22 +1,13 @@
 FROM golang:1.26-alpine AS builder
 
-# Multi-repo build: the build context must be the parent directory holding both
-# warden-gateway and warden-auth, because go.mod has
-# `replace github.com/NicolasPaterno/warden-auth => ../warden-auth` (sibling repo).
-# Build with context at the parent, e.g.:
-#   docker build -f warden-gateway/Dockerfile -t warden-gateway ..
 WORKDIR /src
 
-COPY warden-auth/go.mod warden-auth/go.sum ./warden-auth/
-COPY warden-gateway/go.mod warden-gateway/go.sum ./warden-gateway/
-WORKDIR /src/warden-gateway
+# warden-auth is consumed as a public, versioned module (see go.mod), so this is a
+# normal single-repo build: context is this directory, deps come from the module proxy.
+COPY go.mod go.sum ./
 RUN go mod download
 
-WORKDIR /src
-COPY warden-auth/ ./warden-auth/
-COPY warden-gateway/ ./warden-gateway/
-
-WORKDIR /src/warden-gateway
+COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /gateway ./cmd/gateway
 
 # ─────────────────────────────────────────────────────────────────────────────

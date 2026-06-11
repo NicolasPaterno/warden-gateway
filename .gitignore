@@ -10,6 +10,10 @@ gateway
 # Go
 vendor/
 
+# Go workspace — local multi-module dev only, never committed (CI uses the pinned version)
+go.work
+go.work.sum
+
 # IDE
 .idea/
 .vscode/
