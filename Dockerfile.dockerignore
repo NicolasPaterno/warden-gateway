@@ -1,11 +1,13 @@
-# Build context is the parent dir; only these two repos are needed.
-*
-!warden-auth
-!warden-gateway
+# Single-repo build context (this repo). Keep source + go.mod/go.sum; drop the rest.
+.git
+.github
+bin/
+gateway
+*.log
+coverage.out
+.env
 
-# Trim heavy/irrelevant bits from the two repos we keep.
-**/.git
-**/bin
-**/coverage.out
-**/*.log
-warden-auth/dev-private.pem
+# Local Go workspace must never enter the image: it points at ../warden-auth,
+# which does not exist inside the container, and would break `go build`.
+go.work
+go.work.sum
