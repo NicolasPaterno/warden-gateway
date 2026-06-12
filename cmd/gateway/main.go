@@ -9,7 +9,6 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/NicolasPaterno/warden-auth/authn"
 	warden "github.com/NicolasPaterno/warden-gateway"
@@ -18,13 +17,13 @@ import (
 	"github.com/NicolasPaterno/warden-gateway/internal/hub"
 	"github.com/NicolasPaterno/warden-gateway/internal/metrics"
 	natspub "github.com/NicolasPaterno/warden-gateway/internal/nats"
+	"github.com/NicolasPaterno/warden-gateway/internal/pipeline"
 	"github.com/NicolasPaterno/warden-gateway/internal/postgres"
 	"github.com/NicolasPaterno/warden-gateway/internal/sensor"
 	"github.com/NicolasPaterno/warden-gateway/internal/service"
 	"github.com/NicolasPaterno/warden-gateway/internal/tracing"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
-	"go.opentelemetry.io/otel"
 )
 
 func main() {
@@ -46,7 +45,6 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	ch := make(chan warden.SensorReading)
 
 	shutdown, err := tracing.Init(ctx, cfg.JaegerEndpoint)
 	if err != nil {
@@ -81,6 +79,8 @@ func main() {
 			slog.Error("failed to drain NATS connection", "error", err)
 		}
 	}()
+
+	pipe := pipeline.New(svc, pub)
 
 	healthHandler := httptransport.NewHealthHandler(pool, pub)
 
@@ -121,23 +121,32 @@ func main() {
 		}
 	}()
 
-	sensor1, err := sensor.NewSensor("s1", "tenant-a", "bedroom", warden.Motion, 800*time.Millisecond)
+	if !cfg.SimulatorEnabled {
+		slog.Info("simulator disabled; readings come from ingestion only")
+		// Block until shutdown so deferred cleanup runs.
+		<-ctx.Done()
+		return
+	}
+
+	sensor1, err := sensor.NewSensor("s1", "tenant-a", "bedroom", warden.Motion, cfg.SensorInterval)
 	if err != nil {
 		slog.Error("unknown sensor type", "error", err)
 		os.Exit(1)
 	}
 
-	sensor2, err := sensor.NewSensor("s2", "tenant-a", "bedroom", warden.Temperature, 500*time.Millisecond)
+	sensor2, err := sensor.NewSensor("s2", "tenant-a", "bedroom", warden.Temperature, cfg.SensorInterval)
 	if err != nil {
 		slog.Error("unknown sensor type", "error", err)
 		os.Exit(1)
 	}
 
-	sensor3, err := sensor.NewSensor("s3", "tenant-b", "bedroom", warden.CO2, 200*time.Millisecond)
+	sensor3, err := sensor.NewSensor("s3", "tenant-b", "bedroom", warden.CO2, cfg.SensorInterval)
 	if err != nil {
 		slog.Error("unknown sensor type", "error", err)
 		os.Exit(1)
 	}
+
+	ch := make(chan warden.SensorReading)
 
 	var wg sync.WaitGroup
 
@@ -164,23 +173,6 @@ func main() {
 		close(ch)
 	}()
 
-	for reading := range ch {
-		ctx, span := otel.Tracer("warden-gateway").Start(ctx, "sensor.reading.process")
-		start := time.Now()
-		if err := svc.Save(ctx, reading); err != nil {
-			slog.Error("failed to save reading", "error", err)
-		}
-		metrics.ReadingsTotal.WithLabelValues(string(reading.Type), reading.Room).Inc()
-
-		err := pub.Publish(ctx, reading)
-		if err != nil {
-			slog.Error("error on publish", "error", err)
-			metrics.NATSPublishErrors.Inc()
-		}
-		metrics.ReadingsLatency.Observe(time.Since(start).Seconds())
-
-		// No local h.Broadcast here: the hub is fed by the NATS subscriber
-		// above, so this reading reaches every pod's hub (including this one).
-		span.End()
-	}
+	// Blocks until all sensor goroutines stop and ch is closed.
+	pipe.Run(ctx, ch)
 }
