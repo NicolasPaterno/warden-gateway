@@ -64,3 +64,27 @@ func (h *ReadingsHandler) GetByRoomAndType(w http.ResponseWriter, r *http.Reques
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
+
+func (h *ReadingsHandler) ListRooms(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	claims, ok := authn.ClaimsFromContext(ctx)
+	if !ok || claims.Tenant == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	rooms, err := h.svc.ListRooms(ctx, claims.Tenant)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if rooms == nil {
+		rooms = []string{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(rooms); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}

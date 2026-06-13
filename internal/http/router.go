@@ -16,6 +16,7 @@ func NewRouter(wsHandler *WsHandler, readingsHandler *ReadingsHandler, healthHan
 	//API
 	r.Handle("/ws", wsHandler)
 	r.With(verifier.Middleware).Get("/api/readings", readingsHandler.GetByRoomAndType)
+	r.With(verifier.Middleware).Get("/api/rooms", readingsHandler.ListRooms)
 
 	//server health
 	r.Get("/health/live", healthHandler.Live)
