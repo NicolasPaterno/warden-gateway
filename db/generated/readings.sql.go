@@ -101,3 +101,29 @@ func (q *Queries) InsertReading(ctx context.Context, arg InsertReadingParams) er
 	)
 	return err
 }
+
+const listRooms = `-- name: ListRooms :many
+SELECT DISTINCT room FROM readings
+WHERE tenant_id = $1
+ORDER BY room
+`
+
+func (q *Queries) ListRooms(ctx context.Context, tenantID string) ([]string, error) {
+	rows, err := q.db.Query(ctx, listRooms, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var room string
+		if err := rows.Scan(&room); err != nil {
+			return nil, err
+		}
+		items = append(items, room)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

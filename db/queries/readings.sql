@@ -11,3 +11,8 @@ WHERE tenant_id = $1
   AND time >= $4
   AND time <= $5
 ORDER BY time DESC;
+
+-- name: ListRooms :many
+SELECT DISTINCT room FROM readings
+WHERE tenant_id = $1
+ORDER BY room;
