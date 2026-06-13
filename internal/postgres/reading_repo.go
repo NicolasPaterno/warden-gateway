@@ -62,3 +62,7 @@ func (r *ReadingRepo) GetByRoomAndType(ctx context.Context, tenantID, room strin
 	}
 	return results, nil
 }
+
+func (r *ReadingRepo) ListRooms(ctx context.Context, tenantID string) ([]string, error) {
+	return r.queries.ListRooms(ctx, tenantID)
+}
