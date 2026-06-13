@@ -32,6 +32,10 @@ func (m *mockReadingRepository) GetByRoomAndType(_ context.Context, _, _ string,
 	return nil, nil
 }
 
+func (m *mockReadingRepository) ListRooms(_ context.Context, _ string) ([]string, error) {
+	return nil, nil
+}
+
 type mockBroker struct {
 	publishErr   error
 	publishCalls int

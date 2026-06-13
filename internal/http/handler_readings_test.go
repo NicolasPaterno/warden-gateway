@@ -20,6 +20,8 @@ import (
 type mockReadingRepositoryForHandler struct {
 	getReadings []warden.SensorReading
 	getErr      error
+	rooms       []string
+	roomsErr    error
 }
 
 func (m *mockReadingRepositoryForHandler) Save(_ context.Context, _ warden.SensorReading) error {
@@ -28,6 +30,10 @@ func (m *mockReadingRepositoryForHandler) Save(_ context.Context, _ warden.Senso
 
 func (m *mockReadingRepositoryForHandler) GetByRoomAndType(_ context.Context, _, _ string, _ warden.SensorType, _, _ time.Time) ([]warden.SensorReading, error) {
 	return m.getReadings, m.getErr
+}
+
+func (m *mockReadingRepositoryForHandler) ListRooms(_ context.Context, _ string) ([]string, error) {
+	return m.rooms, m.roomsErr
 }
 
 func TestReadingsHandler_GetByRoomAndType(t *testing.T) {
@@ -96,6 +102,68 @@ func TestReadingsHandler_GetByRoomAndType(t *testing.T) {
 				var result []warden.SensorReading
 				assert.NoError(t, json.NewDecoder(w.Body).Decode(&result))
 				assert.Len(t, result, len(tt.repoReadings))
+			}
+		})
+	}
+}
+
+func TestReadingsHandler_ListRooms(t *testing.T) {
+	tests := []struct {
+		name       string
+		withClaims bool
+		repoRooms  []string
+		repoErr    error
+		wantStatus int
+		wantBody   []string
+	}{
+		{
+			name:       "returns rooms as JSON array",
+			withClaims: true,
+			repoRooms:  []string{"bedroom", "kitchen"},
+			wantStatus: http.StatusOK,
+			wantBody:   []string{"bedroom", "kitchen"},
+		},
+		{
+			name:       "nil rooms coerced to empty array",
+			withClaims: true,
+			repoRooms:  nil,
+			wantStatus: http.StatusOK,
+			wantBody:   []string{},
+		},
+		{
+			name:       "no claims returns 401",
+			withClaims: false,
+			wantStatus: http.StatusUnauthorized,
+		},
+		{
+			name:       "service error returns 500",
+			withClaims: true,
+			repoErr:    errors.New("db error"),
+			wantStatus: http.StatusInternalServerError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := service.NewReadingService(&mockReadingRepositoryForHandler{
+				rooms:    tt.repoRooms,
+				roomsErr: tt.repoErr,
+			})
+			handler := httptransport.NewReadingsHandler(svc)
+
+			req := httptest.NewRequest(http.MethodGet, "/api/rooms", nil)
+			if tt.withClaims {
+				req = req.WithContext(authn.WithClaims(req.Context(), &auth.Claims{Tenant: "tenant-1"}))
+			}
+			w := httptest.NewRecorder()
+			handler.ListRooms(w, req)
+
+			assert.Equal(t, tt.wantStatus, w.Code)
+
+			if tt.wantStatus == http.StatusOK {
+				var result []string
+				assert.NoError(t, json.NewDecoder(w.Body).Decode(&result))
+				assert.Equal(t, tt.wantBody, result)
 			}
 		})
 	}

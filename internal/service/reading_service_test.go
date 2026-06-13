@@ -15,6 +15,8 @@ type mockReadingRepository struct {
 	saveErr     error
 	getReadings []warden.SensorReading
 	getErr      error
+	rooms       []string
+	roomsErr    error
 }
 
 func (m *mockReadingRepository) Save(_ context.Context, _ warden.SensorReading) error {
@@ -23,6 +25,10 @@ func (m *mockReadingRepository) Save(_ context.Context, _ warden.SensorReading) 
 
 func (m *mockReadingRepository) GetByRoomAndType(_ context.Context, _, _ string, _ warden.SensorType, _, _ time.Time) ([]warden.SensorReading, error) {
 	return m.getReadings, m.getErr
+}
+
+func (m *mockReadingRepository) ListRooms(_ context.Context, _ string) ([]string, error) {
+	return m.rooms, m.roomsErr
 }
 
 func TestReadingService_Save(t *testing.T) {
@@ -103,6 +109,50 @@ func TestReadingService_GetByRoomAndType(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Len(t, result, tt.wantLen)
+			}
+		})
+	}
+}
+
+func TestReadingService_ListRooms(t *testing.T) {
+	tests := []struct {
+		name      string
+		repoRooms []string
+		repoErr   error
+		wantRooms []string
+		wantErr   bool
+	}{
+		{
+			name:      "returns rooms from repo",
+			repoRooms: []string{"bedroom", "kitchen"},
+			wantRooms: []string{"bedroom", "kitchen"},
+			wantErr:   false,
+		},
+		{
+			name:      "returns nil when tenant has no rooms",
+			repoRooms: nil,
+			wantRooms: nil,
+			wantErr:   false,
+		},
+		{
+			name:      "propagates repo error",
+			repoErr:   errors.New("db error"),
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := service.NewReadingService(&mockReadingRepository{
+				rooms:    tt.repoRooms,
+				roomsErr: tt.repoErr,
+			})
+			result, err := svc.ListRooms(context.Background(), "tenant-1")
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantRooms, result)
 			}
 		})
 	}

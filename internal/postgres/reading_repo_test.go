@@ -120,3 +120,27 @@ func TestReadingRepo_GetByRoomAndType(t *testing.T) {
 	assert.Equal(t, "bedroom", result[0].Room)
 	assert.Equal(t, warden.Temperature, result[0].Type)
 }
+
+func TestReadingRepo_ListRooms(t *testing.T) {
+	pool, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	repo := postgres.NewReadingRepo(pool)
+	now := time.Now().UTC().Truncate(time.Microsecond)
+
+	readings := []warden.SensorReading{
+		{TenantID: "tenant-1", SensorID: "s1", Room: "kitchen", Type: warden.Temperature, Value: 22.5, Unit: "°C", Timestamp: now},
+		{TenantID: "tenant-1", SensorID: "s1", Room: "bedroom", Type: warden.Temperature, Value: 23.0, Unit: "°C", Timestamp: now},
+		{TenantID: "tenant-1", SensorID: "s2", Room: "bedroom", Type: warden.Humidity, Value: 60.0, Unit: "%", Timestamp: now},
+		{TenantID: "tenant-2", SensorID: "s3", Room: "bathroom", Type: warden.Temperature, Value: 99.0, Unit: "°C", Timestamp: now},
+	}
+
+	for _, r := range readings {
+		require.NoError(t, repo.Save(context.Background(), r))
+	}
+
+	result, err := repo.ListRooms(context.Background(), "tenant-1")
+
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"bedroom", "kitchen"}, result)
+}
