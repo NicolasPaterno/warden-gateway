@@ -22,3 +22,7 @@ func (s *ReadingService) Save(ctx context.Context, reading warden.SensorReading)
 func (s *ReadingService) GetByRoomAndType(ctx context.Context, tenantID, room string, sensorType warden.SensorType, from, to time.Time) ([]warden.SensorReading, error) {
 	return s.repo.GetByRoomAndType(ctx, tenantID, room, sensorType, from, to)
 }
+
+func (s *ReadingService) ListRooms(ctx context.Context, tenantID string) ([]string, error) {
+	return s.repo.ListRooms(ctx, tenantID)
+}
